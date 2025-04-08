@@ -1,0 +1,7 @@
+.env
+conf.d/default.conf
+html/
+log/
+log_letsencrypt/
+letsencrypt/
+

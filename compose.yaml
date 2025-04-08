@@ -1,0 +1,45 @@
+services:
+  nginx-proxy:
+    image: nginx
+    container_name: nginx-proxy
+    volumes:
+      - ./conf.d:/etc/nginx/conf.d
+      - ./log:/var/log/nginx
+      - ./html:/usr/share/nginx/html
+      - ./letsencrypt:/etc/letsencrypt
+    ports:
+      - 80:80
+      - 443:443
+    environment:
+      TZ: Asia/Tokyo
+      DOMAIN_NAME: ${DOMAIN_NAME:?}
+    restart: always
+    entrypoint: /bin/sh -c
+    command:
+      - |
+        envsubst < /etc/nginx/conf.d/default.template > /etc/nginx/conf.d/default.conf
+        while :;
+        do
+          sleep 36h & wait $${!};
+          nginx -s reload;
+        done &
+        nginx -g "daemon off;"
+
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - ./html:/usr/share/nginx/html
+      - ./letsencrypt:/etc/letsencrypt
+      - ./log_letsencrypt:/var/log/letsencrypt
+    environment:
+      DOMAIN_NAME: ${DOMAIN_NAME:?}
+    restart: always
+    entrypoint: /bin/sh -c
+    # command: |
+    #   trap exit TERM
+    #   while :; do certbot renew; sleep 12h & wait $${!}; done;
+
+    command:
+      - |
+        certbot certonly --webroot -w /usr/share/nginx/html/ -d ${DOMAIN_NAME} --dry-run
