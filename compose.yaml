@@ -3,7 +3,7 @@ services:
     image: nginx
     container_name: nginx-proxy
     volumes:
-      - ./conf.d:/etc/nginx/conf.d
+      - ./conf.template:/etc/nginx/conf.template
       - ./log:/var/log/nginx
       - ./html:/usr/share/nginx/html
       - ./letsencrypt:/etc/letsencrypt
@@ -13,17 +13,37 @@ services:
     environment:
       TZ: Asia/Tokyo
       DOMAIN_NAME: ${DOMAIN_NAME:?}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: always
     entrypoint: /bin/sh -c
     command:
       - |
-        envsubst < /etc/nginx/conf.d/default.template > /etc/nginx/conf.d/default.conf
-        while :;
+
+        envsubst < /etc/nginx/conf.template/initial.conf > /etc/nginx/conf.d/default.conf
+        nginx
+
+        while :
         do
-          sleep 36h & wait $${!};
-          nginx -s reload;
-        done &
-        nginx -g "daemon off;"
+          if [ -f /etc/letsencrypt/live/${DOMAIN_NAME}/fullchain.pem ]; then
+            break
+          else
+            echo "Waiting for certbot to generate the certificate"
+            sleep 5s
+          fi
+        done
+
+        echo "The generated certificate is found"
+        echo " ** Starting production nginx **"
+        envsubst < /etc/nginx/conf.template/default.conf > /etc/nginx/conf.d/default.conf
+        nginx -s reload # Reload nginx to apply the new certificate
+
+        while :
+        do
+          sleep 36h & wait $${!}
+          nginx -s reload
+        done
+
 
   certbot:
     image: certbot/certbot
@@ -34,12 +54,27 @@ services:
       - ./log_letsencrypt:/var/log/letsencrypt
     environment:
       DOMAIN_NAME: ${DOMAIN_NAME:?}
+      DRY_RUN_CERTONLY: ${DRY_RUN_CERTONLY:-false}
+      DRY_RUN_RENEW: ${DRY_RUN_RENEW:-false}
     restart: always
     entrypoint: /bin/sh -c
-    # command: |
-    #   trap exit TERM
-    #   while :; do certbot renew; sleep 12h & wait $${!}; done;
-
     command:
       - |
-        certbot certonly --webroot -w /usr/share/nginx/html/ -d ${DOMAIN_NAME} --dry-run
+
+        # certonly when the certificate is not found
+        if [ ! -f /etc/letsencrypt/live/${DOMAIN_NAME}/fullchain.pem ]; then
+          echo "Certificate not found, generating a new one"
+          certbot certonly \
+            --webroot \
+            -w /usr/share/nginx/html/ \
+            -n --agree-tos \
+            -d ${DOMAIN_NAME} \
+            $$($$DRY_RUN_CERTONLY && echo --dry-run)
+        fi
+
+        trap exit TERM
+        while :
+        do
+          sleep 12h & wait $${!};
+          certbot renew $$($$DRY_RUN_RENEW && echo --dry-run)
+        done

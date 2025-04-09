@@ -1,1 +1,5 @@
 DOMAIN_NAME=
+
+# Debug purpose
+DRY_RUN_CERTONLY=false
+DRY_RUN_RENEW=false
