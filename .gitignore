@@ -1,5 +1,5 @@
 .env
-conf.d/default.conf
+conf.d/include/*.conf
 html/
 log/
 log_letsencrypt/
