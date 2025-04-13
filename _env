@@ -1,4 +1,6 @@
 DOMAIN_NAME=
+# ex: CERTONLY_DOMAINS="-d example.com -d www.example.com"
+CERTONLY_DOMAINS=
 
 # Debug purpose
 DRY_RUN_CERTONLY=false

@@ -55,6 +55,7 @@ services:
       - ./log_letsencrypt:/var/log/letsencrypt
     environment:
       DOMAIN_NAME: ${DOMAIN_NAME:?}
+      CERTONLY_DOMAINS: ${CERTONLY_DOMAINS:?}
       DRY_RUN_CERTONLY: ${DRY_RUN_CERTONLY:-false}
       DRY_RUN_RENEW: ${DRY_RUN_RENEW:-false}
     restart: always
@@ -69,7 +70,7 @@ services:
             --webroot \
             -w /usr/share/nginx/html/ \
             -n --agree-tos \
-            -d ${DOMAIN_NAME} \
+            ${CERTONLY_DOMAINS} \
             $$($$DRY_RUN_CERTONLY && echo --dry-run)
         fi
 
