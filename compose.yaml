@@ -37,6 +37,7 @@ services:
         echo "The generated certificate is found"
         echo " ** Starting production nginx **"
         envsubst '$$DOMAIN_NAME' < /etc/nginx/conf.d/template/default.conf > /etc/nginx/conf.d/default.conf
+        envsubst '$$DOMAIN_NAME' < /etc/nginx/conf.d/template/common_setting > /etc/nginx/conf.d/common_setting
         nginx -s reload # Reload nginx to apply the new certificate
 
         while :
